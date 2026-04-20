@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Configuración</title>
+    <style>
+        body { font-family: Arial; margin: 30px; }
+        input, button { padding: 6px; margin: 5px; }
+        ul { margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+<h1>Configuración del Sistema</h1>
+
+<h2>Categorías de Productos</h2>
+
+<input type="text" id="nombreCategoria" placeholder="Nueva categoría">
+<button onclick="crearCategoria()">Agregar</button>
+
+<ul id="listaCategorias"></ul>
+
+<script>
+const apiUrl = "http://127.0.0.1:8000/categorias";
+
+async function cargarCategorias() {
+    const res = await fetch(apiUrl);
+    const categorias = await res.json();
+
+    const ul = document.getElementById("listaCategorias");
+    ul.innerHTML = "";
+
+    categorias.forEach(c => {
+        const li = document.createElement("li");
+        li.textContent = c.nombre;
+        ul.appendChild(li);
+    });
+}
+
+async function crearCategoria() {
+    const nombre = document.getElementById("nombreCategoria").value;
+    if (!nombre) return;
+
+    await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre })
+    });
+
+    document.getElementById("nombreCategoria").value = "";
+    cargarCategorias();
+}
+
+cargarCategorias();
+</script>
+
+</body>
+</html>

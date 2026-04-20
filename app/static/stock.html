@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Ingreso de Stock</title>
+<style>
+body { font-family: Arial; margin: 30px; }
+input, select, button { margin: 5px; padding: 6px; }
+</style>
+</head>
+<body>
+
+<h1>Ingreso de Stock</h1>
+
+<select id="producto"></select>
+<input type="number" id="cantidad" placeholder="Cantidad" min="1">
+<input type="text" id="motivo" placeholder="Motivo (opcional)">
+<button onclick="ingresarStock()">Ingresar</button>
+
+<script>
+const productosUrl = "http://127.0.0.1:8000/productos-admin";
+const ingresoUrl = "http://127.0.0.1:8000/stock/ingreso";
+
+async function cargarProductos() {
+    const res = await fetch(productosUrl);
+    const productos = await res.json();
+    const select = document.getElementById("producto");
+
+    productos
+        .filter(p => p.activo)
+        .forEach(p => {
+            const opt = document.createElement("option");
+            opt.value = p.id;
+            opt.textContent = `${p.nombre} (Stock: ${p.stock})`;
+            select.appendChild(opt);
+        });
+}
+
+async function ingresarStock() {
+    const producto_id = parseInt(document.getElementById("producto").value);
+    const cantidad = parseInt(document.getElementById("cantidad").value);
+    const motivo = document.getElementById("motivo").value;
+
+    if (!cantidad || cantidad <= 0) {
+        alert("Cantidad inválida");
+        return;
+    }
+
+    const res = await fetch(ingresoUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ producto_id, cantidad, motivo })
+    });
+
+    const data = await res.json();
+    alert(`Stock actualizado. Nuevo stock: ${data.nuevo_stock}`);
+    location.reload();
+}
+
+cargarProductos();
+</script>
+
+</body>
+</html>

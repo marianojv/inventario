@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Historial de Ventas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 30px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+        }
+        th {
+            background: #f4f4f4;
+        }
+        .detalle {
+            margin-left: 20px;
+            background: #fafafa;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Historial de Ventas</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Fecha</th>
+            <th>Total</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody id="ventasTabla"></tbody>
+</table>
+
+<div id="detalleVenta"></div>
+
+<script>
+async function cargarVentas() {
+    const res = await fetch("http://127.0.0.1:8000/ventas");
+    const ventas = await res.json();
+
+    const tabla = document.getElementById("ventasTabla");
+    tabla.innerHTML = "";
+
+    ventas.forEach(v => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${v.id}</td>
+            <td>${new Date(v.fecha).toLocaleString()}</td>
+            <td>$${v.total.toFixed(2)}</td>
+            <td><button onclick='verDetalle(${JSON.stringify(v)})'>Ver</button></td>
+        `;
+        tabla.appendChild(tr);
+    });
+}
+
+function verDetalle(venta) {
+    const div = document.getElementById("detalleVenta");
+    let html = `<h3>Detalle venta #${venta.id}</h3>`;
+    html += `<div class="detalle"><ul>`;
+
+    venta.detalles.forEach(d => {
+        const subtotal = d.cantidad * d.precio_unitario;
+        html += `<li>
+            Producto ID: ${d.producto_id} |
+            ${d.producto.nombre} |
+            ${d.producto.categoria?.nombre || "Sin categoría"} |
+            Cant: ${d.cantidad} |
+            Subtotal: $${(d.cantidad * d.precio_unitario).toFixed(2)}
+        </li>`;
+    });
+
+    html += `</ul></div>`;
+    div.innerHTML = html;
+}
+
+cargarVentas();
+</script>
+
+</body>
+</html>

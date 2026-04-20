@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Nueva Venta</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 30px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 15px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+        }
+        th {
+            background: #f4f4f4;
+        }
+        .total {
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+        button {
+            padding: 6px 12px;
+            margin-top: 10px;
+        }
+        #resultados {
+            border: 1px solid #ccc;
+            max-width: 400px;
+            list-style: none;
+            padding: 0;
+        }
+        #resultados li {
+            padding: 6px;
+            cursor: pointer;
+        }
+        #resultados li:hover {
+            background: #eee;
+        }
+
+    </style>
+</head>
+<body>
+
+<h1>Nueva Venta</h1>
+
+<!--label>Producto:</label>
+<select id="productos"></select-->
+
+<input
+  type="text"
+  id="busqueda"
+  placeholder="Buscar producto por nombre o código"
+  autocomplete="off"
+/>
+
+<ul id="resultados"></ul>
+``
+
+
+<label>Cantidad:</label>
+<input type="number" id="cantidad" value="1" min="1">
+
+<button onclick="agregar()">Agregar</button>
+
+<h3>Detalle de la venta</h3>
+
+<table>
+    <thead>
+        <tr>
+            <th>Producto</th>
+            <th>Precio</th>
+            <th>Cantidad</th>
+            <th>Subtotal</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody id="detalle"></tbody>
+</table>
+
+<div class="total">
+    Total: $<span id="total">0.00</span>
+</div>
+
+<button onclick="confirmarVenta()">Confirmar venta</button>
+
+<script>
+let productos = [];
+let detalles = [];
+
+const productosSelect = document.getElementById("productos");
+const detalleTabla = document.getElementById("detalle");
+const totalSpan = document.getElementById("total");
+
+async function cargarProductos() {
+    const res = await fetch("http://127.0.0.1:8000/productos");
+    productos = await res.json();
+
+    productos.forEach(p => {
+        const option = document.createElement("option");
+        option.value = p.id;
+        option.text = `${p.nombre} - $${p.precio_venta} (Stock: ${p.stock})`;
+        productosSelect.appendChild(option);
+    });
+}
+
+
+function agregar() {
+    const productoId = parseInt(productosSelect.value);
+    const cantidad = parseInt(document.getElementById("cantidad").value);
+
+    if (Number.isNaN(cantidad) || cantidad <= 0) {
+        alert("Cantidad inválida");
+        return;
+    }
+
+    const producto = productos.find(p => p.id === productoId);
+    if (!producto) {
+        alert("Producto no encontrado");
+        return;
+    }
+
+    // 🔑 cantidad ya en carrito
+    const enCarrito = detalles.find(d => d.producto_id === productoId);
+    const cantidadActual = enCarrito ? enCarrito.cantidad : 0;
+
+    // 🔑 stock real disponible
+    const disponible = producto.stock - cantidadActual;
+
+    if (disponible === 0) {
+        alert("No queda stock disponible");
+        return;
+    }
+
+    if (cantidad > disponible) {
+        alert(
+            `Stock insuficiente.\n` +
+            `Disponible: ${disponible}`
+        );
+        return;
+    }
+
+    if (enCarrito) {
+        enCarrito.cantidad += cantidad;
+    } else {
+        detalles.push({
+            producto_id: productoId,
+            nombre: producto.nombre,
+            precio: producto.precio_venta,
+            cantidad: cantidad
+        });
+    }
+
+    renderDetalle();
+}
+
+
+function eliminar(productoId) {
+    detalles = detalles.filter(d => d.producto_id !== productoId);
+    renderDetalle();
+}
+
+function renderDetalle() {
+    detalleTabla.innerHTML = "";
+    let total = 0;
+
+    detalles.forEach(d => {
+        const subtotal = d.precio * d.cantidad;
+        total += subtotal;
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>${d.nombre}</td>
+            <td>$${d.precio.toFixed(2)}</td>
+            <td>${d.cantidad}</td>
+            <td>$${subtotal.toFixed(2)}</td>
+            <td>
+                <button onclick="eliminar(${d.producto_id})">X</button>
+            </td>
+        `;
+        detalleTabla.appendChild(row);
+    });
+
+    totalSpan.textContent = total.toFixed(2);
+}
+
+async function confirmarVenta() {
+    if (detalles.length === 0) {
+        alert("No hay productos en la venta");
+        return;
+    }
+
+    const payload = {
+        detalles: detalles.map(d => ({
+            producto_id: d.producto_id,
+            cantidad: d.cantidad
+        }))
+    };
+
+    const res = await fetch("http://127.0.0.1:8000/ventas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+        alert("Error al registrar la venta");
+        return;
+    }
+
+    const data = await res.json();
+    alert(`Venta registrada\nTotal: $${data.total}`);
+    location.reload();
+}
+
+cargarProductos();
+
+const inputBusqueda = document.getElementById("busqueda");
+const listaResultados = document.getElementById("resultados");
+
+let timeout = null;
+
+inputBusqueda.addEventListener("input", () => {
+    clearTimeout(timeout);
+
+    const q = inputBusqueda.value.trim();
+    if (q.length < 2) {
+        listaResultados.innerHTML = "";
+        return;
+    }
+
+    // debounce simple (UX + performance)
+    timeout = setTimeout(() => buscar(q), 300);
+});
+``
+async function buscar(q) {
+    const res = await fetch(
+        `http://127.0.0.1:8000/productos/buscar?q=${encodeURIComponent(q)}`
+    );
+    const productos = await res.json();
+
+    listaResultados.innerHTML = "";
+
+    productos.forEach(p => {
+        const li = document.createElement("li");
+        li.textContent =
+            `${p.codigo ?? ""} ${p.nombre} - $${p.precio} (Stock: ${p.stock})`;
+
+        li.onclick = () => seleccionarProducto(p);
+        listaResultados.appendChild(li);
+    });
+}
+
+function seleccionarProducto(p) {
+    const enCarrito = detalles.find(d => d.producto_id === p.id);
+    const cantidadActual = enCarrito ? enCarrito.cantidad : 0;
+
+    if (cantidadActual + 1 > p.stock) {
+        alert("No hay stock disponible");
+        return;
+    }
+
+    if (enCarrito) {
+        enCarrito.cantidad += 1;
+    } else {
+        detalles.push({
+            producto_id: p.id,
+            nombre: p.nombre,
+            precio: p.precio,
+            cantidad: 1
+        });
+    }
+
+    renderDetalle();
+
+    // limpiar búsqueda
+    inputBusqueda.value = "";
+    listaResultados.innerHTML = "";
+}
+``
+
+</script>
+
+</body>
+</html>

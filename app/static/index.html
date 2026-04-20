@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Sistema de Stock</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+        }
+        h1 {
+            color: #333;
+        }
+        form {
+            margin-bottom: 30px;
+        }
+        input {
+            margin: 5px;
+            padding: 6px;
+        }
+        button {
+            padding: 6px 12px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Sistema de Stock</h1>
+
+<h2>Crear producto</h2>
+<form id="productoForm">
+    <input type="text" id="nombre" placeholder="Nombre" required>
+    <input type="number" id="precio" placeholder="Precio" step="0.01" required>
+    <input type="number" id="stock" placeholder="Stock inicial" required>
+    <select id="categoria"></select>
+    <button type="submit">Guardar</button>
+</form>
+
+<h2>Productos</h2>
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Precio</th>
+            <th>Stock</th>
+            <th>Categoria</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody id="productosTabla">
+    </tbody>
+</table>
+
+
+
+<script>
+const productosAdminUrl = "http://127.0.0.1:8000/productos-admin"; //GET
+const productosUrl = "http://127.0.0.1:8000/productos"; //POST
+//const apiUrl = "http://127.0.0.1:8000/productos-admin";
+
+async function cargarProductos() {
+    //const response = await fetch(apiUrl);
+    const response = await fetch(productosAdminUrl);
+    const productos = await response.json();
+
+    const tabla = document.getElementById("productosTabla");
+    tabla.innerHTML = "";
+
+    productos.forEach(p => {
+        const fila = document.createElement("tr");
+        fila.innerHTML = `
+            <td>${p.id}</td>
+            <td>${p.nombre}</td>
+            <td>${p.precio_venta}</td>
+            <td>${p.stock}</td>
+            <td>${p.categoria ? p.categoria.nombre : "-"}</td>
+            <td>
+            ${
+                p.activo
+                ? `<button onclick="desactivarProducto(${p.id})">Desactivar</button>`
+                : `<button onclick="activarProducto(${p.id})">Activar</button>`
+            }
+            </td>
+        `;
+        tabla.appendChild(fila);
+    });
+}
+
+document.getElementById("productoForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const nombre = document.getElementById("nombre").value;
+    const codigo = document.getElementById("codigo")?.value || null;
+    const precio = document.getElementById("precio").value;
+    const stock = document.getElementById("stock").value;
+    const categoriaId = document.getElementById("categoria").value;
+
+    await fetch(productosUrl, {   // ✅ POST VA A /productos
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            codigo: codigo,
+            nombre: nombre,
+            precio_venta: parseFloat(precio),
+            stock: parseInt(stock),
+            categoria_id: parseInt(categoriaId)
+        })
+    });
+
+    document.getElementById("productoForm").reset();
+    cargarProductos(); // vuelve a pedir /productos-admin
+});
+
+cargarProductos();
+
+async function cargarCategorias() {
+    const res = await fetch("http://127.0.0.1:8000/categorias");
+    const categorias = await res.json();
+    const select = document.getElementById("categoria");
+
+    categorias.forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c.id;
+        opt.textContent = c.nombre;
+        select.appendChild(opt);
+    });
+}
+
+cargarCategorias();
+
+
+async function eliminarProducto(id) {
+    if (!confirm("¿Seguro que deseas eliminar este producto?")) {
+        return;
+    }
+
+    const res = await fetch(`http://127.0.0.1:8000/productos/${id}`, {
+        method: "DELETE"
+    });
+
+    if (!res.ok) {
+        alert("Error al eliminar producto");
+        return;
+    }
+
+    cargarProductos();
+}
+
+async function desactivarProducto(id) {
+    await fetch(`http://127.0.0.1:8000/productos/${id}/desactivar`, {
+        method: "PATCH"
+    });
+    cargarProductos();
+}
+
+async function activarProducto(id) {
+    await fetch(`http://127.0.0.1:8000/productos/${id}/activar`, {
+        method: "PATCH"
+    });
+    cargarProductos();
+}
+
+</script>
+
+</body>
+</html>
