@@ -263,9 +263,11 @@ def stock_web():
         return f.read()    
     
 
+
 @app.get("/productos/buscar")
 def buscar_productos(q: str, db: Session = Depends(get_db)):
-    if len(q.strip()) < 2:
+    q = q.strip()
+    if len(q) < 2:
         return []
 
     productos = (
@@ -285,11 +287,10 @@ def buscar_productos(q: str, db: Session = Depends(get_db)):
     return [
         {
             "id": p.id,
-            "nombre": p.nombre,
             "codigo": p.codigo,
+            "nombre": p.nombre,
             "precio": p.precio_venta,
-            "stock": p.stock
+            "stock": p.stock,
         }
         for p in productos
     ]
-    
