@@ -18,23 +18,8 @@ input {
 /* =========================
    BÚSQUEDA
 ========================= */
-#busqueda {
-    width: 400px;
-}
-
-#resultados {
-    border: 1px solid #ccc;
-    max-width: 420px;
-    list-style: none;
-    padding: 0;
-    margin-top: 5px;
-}
-#resultados li {
-    padding: 6px;
-    cursor: pointer;
-}
-#resultados li:hover {
-    background: #eee;
+#producto {
+    width: 420px;
 }
 
 /* =========================
@@ -64,7 +49,7 @@ tfoot td {
     background: #fafafa;
 }
 
-/* quitar flechas number */
+/* quitar flechas */
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button {
     -webkit-appearance: none;
@@ -82,13 +67,12 @@ input[type=number] {
 <h1>Nueva Venta</h1>
 
 <input
-    id="busqueda"
-    type="text"
+    id="producto"
+    list="productos"
     placeholder="Buscar producto por nombre o código"
     autocomplete="off"
 />
-
-<ul id="resultados"></ul>
+<datalist id="productos"></datalist>
 
 <table>
 <thead>
@@ -117,13 +101,140 @@ const buscarUrl = "http://127.0.0.1:8000/productos/buscar";
 const ventasUrl = "http://127.0.0.1:8000/ventas";
 
 let detalles = [];
-let timeout = null;
 
-const inputBusqueda = document.getElementById("busqueda");
-const listaResultados = document.getElementById("resultados");
+const inputProducto = document.getElementById("producto");
+const dataList = document.getElementById("productos");
 const detalleTabla = document.getElementById("detalle");
 const totalSpan = document.getElementById("total");
 
+let productosCache = [];
+
 /* =========================
-   BÚSQUEDA TIPO POS
+   BUSCAR PRODUCTOS (TYPEAHEAD)
 ========================= */
+
+inputProducto.addEventListener("input", async () => {
+    const q = inputProducto.value.trim();
+    if (q.length < 2) return;
+
+    const res = await fetch(`${buscarUrl}?q=${encodeURIComponent(q)}`);
+    const productos = await res.json();
+
+    productosCache = productos;
+    dataList.innerHTML = "";
+
+    productos.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = `${p.codigo ?? ""} ${p.nombre}`.trim();
+        opt.dataset.id = p.id;
+        dataList.appendChild(opt);
+    });
+});
+
+/* =========================
+   SELECCIÓN
+========================= */
+
+inputProducto.addEventListener("change", () => {
+    const value = inputProducto.value;
+    const producto = productosCache.find(
+        p => `${(p.codigo ?? "").trim()} ${p.nombre}`.trim() === value
+    );
+
+    if (!producto) return;
+
+    agregar(producto, 1);
+    inputProducto.value = "";
+});
+
+function agregar(p, cantidad) {
+    const existente = detalles.find(d => d.producto_id === p.id);
+    const actual = existente ? existente.cantidad : 0;
+
+    if (actual + cantidad > p.stock) {
+        alert("Stock insuficiente");
+        return;
+    }
+
+    if (existente) {
+        existente.cantidad += cantidad;
+    } else {
+        detalles.push({
+            producto_id: p.id,
+            nombre: p.nombre,
+            precio: p.precio,
+            cantidad: cantidad
+        });
+    }
+
+    render();
+}
+
+function render() {
+    detalleTabla.innerHTML = "";
+    let total = 0;
+
+    detalles.forEach((d, i) => {
+        const subtotal = d.precio * d.cantidad;
+        total += subtotal;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${d.nombre}</td>
+            <td class="num">$${d.precio.toFixed(2)}</td>
+            <td class="num">
+                <input type="number" min="1" value="${d.cantidad}"
+                       onchange="cambiarCantidad(${i}, this.value)">
+            </td>
+            <td class="num">$${subtotal.toFixed(2)}</td>
+        `;
+        detalleTabla.appendChild(tr);
+    });
+
+    totalSpan.textContent = total.toFixed(2);
+}
+
+function cambiarCantidad(i, v) {
+    const n = parseInt(v);
+    if (n > 0) {
+        detalles[i].cantidad = n;
+        render();
+    }
+}
+
+/* =========================
+   CONFIRMAR
+========================= */
+
+async function confirmarVenta() {
+    if (!detalles.length) {
+        alert("No hay productos");
+        return;
+    }
+
+    const payload = {
+        detalles: detalles.map(d => ({
+            producto_id: d.producto_id,
+            cantidad: d.cantidad
+        }))
+    };
+
+    const res = await fetch(ventasUrl, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+        alert("Error al registrar la venta");
+        return;
+    }
+
+    const data = await res.json();
+    alert(`Venta registrada. Total: $${data.total}`);
+    location.reload();
+}
+</script>
+
+</body>
+</html>
