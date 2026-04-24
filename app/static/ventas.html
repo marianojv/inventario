@@ -1,51 +1,82 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Ventas</title>
+<meta charset="UTF-8">
+<title>Ventas</title>
 
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 30px;
-        }
-        input {
-            padding: 6px;
-            width: 400px;
-        }
-        #resultados {
-            list-style: none;
-            padding: 0;
-            margin-top: 5px;
-            border: 1px solid #ccc;
-            max-width: 420px;
-        }
-        #resultados li {
-            padding: 6px;
-            cursor: pointer;
-        }
-        #resultados li:hover {
-            background-color: #eee;
-        }
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin-top: 20px;
-        }
-        th, td {
-            border: 1px solid #ccc;
-            padding: 8px;
-        }
-        th {
-            background-color: #f4f4f4;
-        }
-        .total {
-            margin-top: 15px;
-            font-size: 18px;
-            font-weight: bold;
-        }
-    </style>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    margin: 30px;
+}
+
+input {
+    padding: 6px;
+    font-size: 14px;
+}
+
+/* =========================
+   BÚSQUEDA
+========================= */
+#busqueda {
+    width: 400px;
+}
+
+#resultados {
+    border: 1px solid #ccc;
+    max-width: 420px;
+    list-style: none;
+    padding: 0;
+    margin-top: 5px;
+}
+#resultados li {
+    padding: 6px;
+    cursor: pointer;
+}
+#resultados li:hover {
+    background: #eee;
+}
+
+/* =========================
+   TABLA
+========================= */
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 20px;
+}
+th, td {
+    border: 1px solid #ccc;
+    padding: 8px;
+}
+th {
+    background: #f4f4f4;
+}
+th.num, td.num {
+    text-align: right;
+}
+
+/* =========================
+   FOOTER
+========================= */
+tfoot td {
+    font-weight: bold;
+    background: #fafafa;
+}
+
+/* quitar flechas number */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+input[type=number] {
+    -moz-appearance: textfield;
+    text-align: right;
+}
+</style>
 </head>
+
 <body>
 
 <h1>Nueva Venta</h1>
@@ -60,20 +91,24 @@
 <ul id="resultados"></ul>
 
 <table>
-    <thead>
-        <tr>
-            <th>Producto</th>
-            <th>Precio</th>
-            <th>Cantidad</th>
-            <th>Subtotal</th>
-        </tr>
-    </thead>
-    <tbody id="detalle"></tbody>
-</table>
+<thead>
+<tr>
+    <th>Producto</th>
+    <th class="num">Precio</th>
+    <th class="num">Cantidad</th>
+    <th class="num">Subtotal</th>
+</tr>
+</thead>
 
-<div class="total">
-    Total: $<span id="total">0.00</span>
-</div>
+<tbody id="detalle"></tbody>
+
+<tfoot>
+<tr>
+    <td colspan="3">Total</td>
+    <td class="num">$<span id="total">0.00</span></td>
+</tr>
+</tfoot>
+</table>
 
 <button onclick="confirmarVenta()">Confirmar venta</button>
 
@@ -92,121 +127,3 @@ const totalSpan = document.getElementById("total");
 /* =========================
    BÚSQUEDA TIPO POS
 ========================= */
-
-inputBusqueda.addEventListener("input", () => {
-    clearTimeout(timeout);
-    const q = inputBusqueda.value.trim();
-
-    if (q.length < 2) {
-        listaResultados.innerHTML = "";
-        return;
-    }
-
-    timeout = setTimeout(() => buscar(q), 300);
-});
-
-async function buscar(q) {
-    const res = await fetch(`${buscarUrl}?q=${encodeURIComponent(q)}`);
-    const productos = await res.json();
-
-    listaResultados.innerHTML = "";
-
-    productos.forEach(p => {
-        const li = document.createElement("li");
-        li.textContent =
-            `${p.codigo ?? ""} ${p.nombre} - $${p.precio} (Stock: ${p.stock})`;
-
-        li.onclick = () => seleccionarProducto(p);
-        listaResultados.appendChild(li);
-    });
-}
-
-/* =========================
-   CARRITO
-========================= */
-
-function seleccionarProducto(p) {
-    const enCarrito = detalles.find(d => d.producto_id === p.id);
-    const cantidadActual = enCarrito ? enCarrito.cantidad : 0;
-
-    if (cantidadActual + 1 > p.stock) {
-        alert("No hay stock disponible");
-        return;
-    }
-
-    if (enCarrito) {
-        enCarrito.cantidad += 1;
-    } else {
-        detalles.push({
-            producto_id: p.id,
-            nombre: p.nombre,
-            precio: p.precio,
-            cantidad: 1
-        });
-    }
-
-    renderDetalle();
-
-    inputBusqueda.value = "";
-    listaResultados.innerHTML = "";
-    inputBusqueda.focus();
-}
-
-function renderDetalle() {
-    detalleTabla.innerHTML = "";
-    let total = 0;
-
-    detalles.forEach(d => {
-        const subtotal = d.cantidad * d.precio;
-        total += subtotal;
-
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${d.nombre}</td>
-            <td>$${d.precio.toFixed(2)}</td>
-            <td>${d.cantidad}</td>
-            <td>$${subtotal.toFixed(2)}</td>
-        `;
-        detalleTabla.appendChild(tr);
-    });
-
-    totalSpan.textContent = total.toFixed(2);
-}
-
-/* =========================
-   CONFIRMAR VENTA
-========================= */
-
-async function confirmarVenta() {
-    if (detalles.length === 0) {
-        alert("No hay productos en la venta");
-        return;
-    }
-
-    const payload = {
-        detalles: detalles.map(d => ({
-            producto_id: d.producto_id,
-            cantidad: d.cantidad
-        }))
-    };
-
-    const res = await fetch(ventasUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-    });
-
-    if (!res.ok) {
-        alert("Error al registrar la venta");
-        return;
-    }
-
-    const data = await res.json();
-    alert(`Venta registrada. Total: $${data.total}`);
-
-    location.reload();
-}
-</script>
-
-</body>
-</html>
