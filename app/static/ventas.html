@@ -16,7 +16,35 @@ input {
 }
 
 /* =========================
-   BÚSQUEDA
+   CLIENTE
+========================= */
+.cliente-box {
+    margin-bottom: 20px;
+    padding: 10px;
+    border: 1px solid #ccc;
+}
+
+.row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.row label {
+    width: 130px;
+}
+
+#cliente_codigo {
+    width: 200px;
+}
+
+#cliente_nombre {
+    width: 300px;
+}
+
+/* =========================
+   PRODUCTOS
 ========================= */
 #producto {
     width: 420px;
@@ -49,7 +77,36 @@ tfoot td {
     background: #fafafa;
 }
 
-/* quitar flechas */
+/* =========================
+   MODAL
+========================= */
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.4);
+}
+
+.modal-content {
+    background: #fff;
+    width: 600px;
+    margin: 50px auto;
+    padding: 20px;
+}
+
+.form-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.form-row label {
+    width: 150px;
+}
+
+/* util */
+.hidden { display: none; }
+
+/* quitar flechas number */
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button {
     -webkit-appearance: none;
@@ -66,6 +123,29 @@ input[type=number] {
 
 <h1>Nueva Venta</h1>
 
+<!-- =========================
+     CLIENTE
+========================= -->
+<div class="cliente-box">
+
+<div class="row">
+    <label>Código Cliente</label>
+    <input id="cliente_codigo" list="clientes" autocomplete="off">
+    <datalist id="clientes"></datalist>
+
+    <button onclick="abrirModalCliente()">Crear Cliente</button>
+</div>
+
+<div class="row">
+    <label>Cliente</label>
+    <input id="cliente_nombre" readonly>
+</div>
+
+</div>
+
+<!-- =========================
+     PRODUCTOS
+========================= -->
 <input
     id="producto"
     list="productos"
@@ -77,6 +157,7 @@ input[type=number] {
 <table>
 <thead>
 <tr>
+    <th>Código</th>
     <th>Producto</th>
     <th class="num">Precio</th>
     <th class="num">Cantidad</th>
@@ -88,7 +169,7 @@ input[type=number] {
 
 <tfoot>
 <tr>
-    <td colspan="3">Total</td>
+    <td colspan="4">Total</td>
     <td class="num">$<span id="total">0.00</span></td>
 </tr>
 </tfoot>
@@ -96,143 +177,244 @@ input[type=number] {
 
 <button onclick="confirmarVenta()">Confirmar venta</button>
 
+<!-- =========================
+     MODAL CLIENTE
+========================= -->
+<div class="modal" id="modalCliente">
+<div class="modal-content">
+
+<h2>Alta de Cliente</h2>
+
+<div class="form-row">
+    <label>Tipo</label>
+    <div>
+        <input type="radio" name="tipo" value="EMPRESA" checked onchange="cambiarTipo()"> Empresa
+        <input type="radio" name="tipo" value="PERSONA" onchange="cambiarTipo()"> Persona
+    </div>
+</div>
+
+<div class="form-row empresa">
+    <label>Código Fiscal *</label>
+    <input id="codigo_fiscal">
+</div>
+
+<div class="form-row persona hidden">
+    <label>DNI</label>
+    <input id="dni">
+</div>
+
+<div class="form-row">
+    <label>Nombre / Razón Social *</label>
+    <input id="nombre_razon">
+</div>
+
+<div class="form-row">
+    <label>Teléfono</label>
+    <input id="telefono">
+</div>
+
+<div class="form-row">
+    <label>Calle</label>
+    <input id="calle">
+</div>
+
+<div class="form-row">
+    <label>Número</label>
+    <input id="numero">
+</div>
+
+<div class="form-row">
+    <label>Localidad</label>
+    <input id="localidad">
+</div>
+
+<div class="form-row">
+    <label>CP</label>
+    <input id="codigo_postal">
+</div>
+
+<div class="form-row">
+    <button onclick="guardarCliente()">Guardar</button>
+    <button onclick="cerrarModalCliente()">Cancelar</button>
+</div>
+
+</div>
+</div>
+
 <script>
-const buscarUrl = "http://127.0.0.1:8000/productos/buscar";
+const buscarClientesUrl = "http://127.0.0.1:8000/clientes/buscar";
+const crearClienteUrl = "http://127.0.0.1:8000/clientes";
+const buscarProductosUrl = "http://127.0.0.1:8000/productos/buscar";
 const ventasUrl = "http://127.0.0.1:8000/ventas";
 
+let clienteActual = null;
+let clientesCache = [];
+let productosCache = [];
 let detalles = [];
 
-const inputProducto = document.getElementById("producto");
-const dataList = document.getElementById("productos");
-const detalleTabla = document.getElementById("detalle");
-const totalSpan = document.getElementById("total");
-
-let productosCache = [];
-
 /* =========================
-   BUSCAR PRODUCTOS (TYPEAHEAD)
+   CLIENTES
 ========================= */
 
-inputProducto.addEventListener("input", async () => {
-    const q = inputProducto.value.trim();
+cliente_codigo.addEventListener("input", async () => {
+    const q = cliente_codigo.value.trim();
     if (q.length < 2) return;
 
-    const res = await fetch(`${buscarUrl}?q=${encodeURIComponent(q)}`);
-    const productos = await res.json();
+    const res = await fetch(`${buscarClientesUrl}?q=${encodeURIComponent(q)}`);
+    const clientes = await res.json();
 
-    productosCache = productos;
-    dataList.innerHTML = "";
+    clientesCache = clientes;
+    clientes.innerHTML = "";
 
-    productos.forEach(p => {
+    clientes.forEach(c => {
         const opt = document.createElement("option");
-        opt.value = `${p.codigo ?? ""} ${p.nombre}`.trim();
-        opt.dataset.id = p.id;
-        dataList.appendChild(opt);
+        opt.value = `${c.codigo_cliente} - ${c.nombre_razon_social}`;
+        opt.dataset.codigo_cliente = c.codigo_cliente;
+        document.getElementById("clientes").appendChild(opt);
     });
 });
 
-/* =========================
-   SELECCIÓN
-========================= */
-
-inputProducto.addEventListener("change", () => {
-    const value = inputProducto.value;
-    const producto = productosCache.find(
-        p => `${(p.codigo ?? "").trim()} ${p.nombre}`.trim() === value
+cliente_codigo.addEventListener("change", () => {
+    const val = cliente_codigo.value;
+    const c = clientesCache.find(x =>
+        `${x.codigo_cliente} - ${x.nombre_razon_social}` === val
     );
+    if (!c) return;
 
-    if (!producto) return;
-
-    agregar(producto, 1);
-    inputProducto.value = "";
+    clienteActual = c;
+    cliente_nombre.value = c.nombre_razon_social;
 });
 
-function agregar(p, cantidad) {
-    const existente = detalles.find(d => d.producto_id === p.id);
-    const actual = existente ? existente.cantidad : 0;
+/* =========================
+   PRODUCTOS (igual que antes)
+========================= */
 
-    if (actual + cantidad > p.stock) {
-        alert("Stock insuficiente");
-        return;
-    }
+producto.addEventListener("input", async () => {
+    const q = producto.value.trim();
+    if (q.length < 2) return;
 
-    if (existente) {
-        existente.cantidad += cantidad;
-    } else {
-        detalles.push({
-            producto_id: p.id,
-            nombre: p.nombre,
-            precio: p.precio,
-            cantidad: cantidad
-        });
-    }
+    const res = await fetch(`${buscarProductosUrl}?q=${encodeURIComponent(q)}`);
+    const productos = await res.json();
 
+    productosCache = productos;
+    productos.innerHTML = "";
+
+    productos.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = `${p.codigo} ${p.nombre}`;
+        opt.dataset.id = p.id;
+        document.getElementById("productos").appendChild(opt);
+    });
+});
+
+producto.addEventListener("change", () => {
+    const val = producto.value;
+    const p = productosCache.find(x => `${x.codigo} ${x.nombre}` === val);
+    if (!p) return;
+
+    agregarProducto(p, 1);
+    producto.value = "";
+});
+
+/* =========================
+   CARRITO
+========================= */
+
+function agregarProducto(p, cant) {
+    const ex = detalles.find(d => d.producto_id === p.id);
+    if (ex) ex.cantidad += cant;
+    else detalles.push({
+        producto_id: p.id,
+        codigo: p.codigo,
+        nombre: p.nombre,
+        precio: p.precio,
+        cantidad: cant
+    });
     render();
 }
 
 function render() {
-    detalleTabla.innerHTML = "";
+    detalle.innerHTML = "";
     let total = 0;
 
-    detalles.forEach((d, i) => {
-        const subtotal = d.precio * d.cantidad;
-        total += subtotal;
+    detalles.forEach((d,i) => {
+        const sub = d.precio * d.cantidad;
+        total += sub;
 
         const tr = document.createElement("tr");
         tr.innerHTML = `
+            <td>${d.codigo}</td>
             <td>${d.nombre}</td>
             <td class="num">$${d.precio.toFixed(2)}</td>
             <td class="num">
-                <input type="number" min="1" value="${d.cantidad}"
-                       onchange="cambiarCantidad(${i}, this.value)">
+              <input type="number" min="1" value="${d.cantidad}">
             </td>
-            <td class="num">$${subtotal.toFixed(2)}</td>
+            <td class="num">$${sub.toFixed(2)}</td>
         `;
-        detalleTabla.appendChild(tr);
+        detalle.appendChild(tr);
     });
 
     totalSpan.textContent = total.toFixed(2);
 }
 
-function cambiarCantidad(i, v) {
-    const n = parseInt(v);
-    if (n > 0) {
-        detalles[i].cantidad = n;
-        render();
-    }
-}
-
 /* =========================
-   CONFIRMAR
+   VALIDAR VENTA
 ========================= */
 
 async function confirmarVenta() {
+    if (!clienteActual) {
+        alert("Debe seleccionar un cliente");
+        return;
+    }
     if (!detalles.length) {
         alert("No hay productos");
         return;
     }
+    alert("Venta lista para persistir (Commit 4)");
+}
+
+/* =========================
+   MODAL CLIENTE
+========================= */
+
+function abrirModalCliente() {
+    modalCliente.style.display = "block";
+}
+function cerrarModalCliente() {
+    modalCliente.style.display = "none";
+}
+function cambiarTipo() {
+    const tipo = document.querySelector("input[name=tipo]:checked").value;
+    document.querySelector(".empresa").style.display = tipo === "EMPRESA" ? "flex" : "none";
+    document.querySelector(".persona").style.display = tipo === "PERSONA" ? "flex" : "none";
+}
+async function guardarCliente() {
+    const tipo = document.querySelector("input[name=tipo]:checked").value;
 
     const payload = {
-        detalles: detalles.map(d => ({
-            producto_id: d.producto_id,
-            cantidad: d.cantidad
-        }))
+        tipo_cliente: tipo,
+        nombre_razon_social: nombre_razon.value,
+        telefono: telefono.value,
+        calle: calle.value,
+        numero: numero.value,
+        localidad: localidad.value,
+        codigo_postal: codigo_postal.value,
+        codigo_fiscal: tipo === "EMPRESA" ? codigo_fiscal.value : null,
+        dni: tipo === "PERSONA" ? dni.value : null
     };
 
-    const res = await fetch(ventasUrl, {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
+    const res = await fetch(crearClienteUrl, {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
         body: JSON.stringify(payload)
     });
 
-    if (!res.ok) {
-        alert("Error al registrar la venta");
-        return;
-    }
+    const c = await res.json();
+    clienteActual = c;
+    cliente_codigo.value = `${c.codigo_cliente} - ${c.nombre_razon_social}`;
+    cliente_nombre.value = c.nombre_razon_social;
 
-    const data = await res.json();
-    alert(`Venta registrada. Total: $${data.total}`);
-    location.reload();
+    cerrarModalCliente();
 }
 </script>
 
