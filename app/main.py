@@ -22,6 +22,11 @@ from .schemas.stock import IngresoStockCreate
 
 from sqlalchemy import or_
 
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+from fastapi import Depends
+
+
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Sistema de Stock y Ventas")
@@ -58,18 +63,54 @@ def get_db():
 #   return nuevo_producto
 
 
+
+from sqlalchemy import func
+from fastapi import Depends
+from sqlalchemy.orm import Session
+
 @app.post("/productos", response_model=ProductoResponse)
 def crear_producto(producto: ProductoCreate, db: Session = Depends(get_db)):
-    nueva = Producto(
+    """
+    Genera código de producto con formato:
+    100001 .. 100999
+    """
+
+    # 1️⃣ Obtener el último código generado
+    ultimo_codigo = (
+        db.query(func.max(Producto.codigo))
+        .filter(Producto.codigo.like("100%"))
+        .scalar()
+    )
+
+    # 2️⃣ Calcular siguiente secuencia
+    if ultimo_codigo:
+        secuencia = int(ultimo_codigo[-3:]) + 1
+    else:
+        secuencia = 1
+
+    # 3️⃣ Validación simple de límite (MVP)
+    if secuencia > 999:
+        raise ValueError("Límite máximo de productos alcanzado (999)")
+
+    # 4️⃣ Construir código
+    codigo = f"100{secuencia:03d}"
+
+    # 5️⃣ Crear producto (activo por defecto)
+    nuevo = Producto(
+        codigo=codigo,
         nombre=producto.nombre,
         precio_venta=producto.precio_venta,
         stock=producto.stock,
-        categoria_id=producto.categoria_id
+        categoria_id=producto.categoria_id,
+        activo=True
     )
-    db.add(nueva)
+
+    db.add(nuevo)
     db.commit()
-    db.refresh(nueva)
-    return nueva
+    db.refresh(nuevo)
+
+    return nuevo
+
 
 @app.get("/productos", response_model=list[ProductoResponse])
 def listar_productos(db: Session = Depends(get_db)):
@@ -273,8 +314,6 @@ def buscar_productos(q: str, db: Session = Depends(get_db)):
     productos = (
         db.query(Producto)
         .filter(
-            Producto.activo == True,
-            Producto.stock > 0,
             or_(
                 Producto.nombre.ilike(f"%{q}%"),
                 Producto.codigo.ilike(f"%{q}%")
@@ -291,6 +330,7 @@ def buscar_productos(q: str, db: Session = Depends(get_db)):
             "nombre": p.nombre,
             "precio": p.precio_venta,
             "stock": p.stock,
+            "activo": p.activo
         }
         for p in productos
     ]

@@ -10,6 +10,7 @@ class ProductoCreate(BaseModel):
 
 class ProductoResponse(BaseModel):
     id: int
+    codigo: str
     nombre: str
     precio_venta: float
     stock: int
