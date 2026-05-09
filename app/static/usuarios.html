@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="/static/styles.css">
+<title>Usuarios</title>
+<body>
+
+<div class="ribbon">
+    <button onclick="volver()">⬅ Volver</button>
+    <button onclick="abrirNuevo()">➕ Nuevo usuario</button>
+</div>
+
+<h1>Usuarios</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Username</th>
+      <th>Rol</th>
+      <th>Activo</th>
+      <th>Acciones</th>
+    </tr>
+  </thead>
+  <tbody id="tablaUsuarios"></tbody>
+</table>
+
+<div id="modalUsuario" class="modal hidden">
+  <div class="modal-content">
+
+    <h2>Nuevo Usuario</h2>
+
+    <input id="usr_nombre" placeholder="Nombre completo">
+    <br><br>
+
+    <input id="usr_username" placeholder="Usuario">
+    <br><br>
+
+    <input id="usr_password" type="password" placeholder="Contraseña">
+    <br><br>
+
+    <select id="usr_rol">
+      <option value="ADMIN">ADMIN</option>
+      <option value="USER">USER</option>
+      <option value="VIEWER">VIEWER</option>
+    </select>
+
+    <br><br>
+
+    <button onclick="guardarUsuario()">Guardar</button>
+    <button onclick="cerrarModalUsuario()">Cancelar</button>
+
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+function authHeaders() {
+    const user = JSON.parse(localStorage.getItem("usuario"));
+
+    return {
+        "x-user-id": user.id,
+        "x-user-rol": user.rol
+    };
+}
+
+async function cargarUsuarios() {
+
+    const res = await fetch("/usuarios", {
+        headers: authHeaders()
+    });
+
+    const data = await res.json();
+
+    tablaUsuarios.innerHTML = "";
+
+    data.forEach(u => {
+        const tr = document.createElement("tr");
+
+        let botones = `
+            <button onclick="cambiarPass(${u.id})">Clave</button>
+        `;
+
+        // ✅ SOLO si NO es ADMIN
+        if (u.rol !== "ADMIN") {
+            botones += `
+                <button onclick="toggle(${u.id})">On/Off</button>
+                <button onclick="eliminar(${u.id})">🗑</button>
+            `;
+        }
+
+        tr.innerHTML = `
+            <td>${u.id}</td>
+            <td>${u.username}</td>
+            <td>${u.rol}</td>
+            <td>${u.activo ? "✅" : "❌"}</td>
+            <td>
+                <button onclick="toggle(${u.id})">On/Off</button>
+                <button onclick="cambiarPass(${u.id})">Clave</button>
+                <button onclick="eliminar(${u.id})">🗑</button>
+            </td>
+        `;
+
+        tablaUsuarios.appendChild(tr);
+    });
+}
+
+cargarUsuarios();
+
+async function toggle(id) {
+    const res = await fetch(`/usuarios/${id}/toggle`, {
+        method: "PUT",
+        headers: authHeaders()
+    });
+
+    if (!res.ok) {
+        const err = await res.json();
+        mostrarToast(err.detail || "Error", "error");
+        return;
+    }
+
+    mostrarToast("Usuario actualizado ✅", "success");
+
+    cargarUsuarios();
+}
+
+async function cambiarPass(id) {
+    const pass = prompt("Nueva contraseña");
+
+    if (!pass) return;
+
+    const res = await fetch(`/usuarios/${id}/password`, {
+        method: "PUT",
+        headers: {
+            ...authHeaders(),
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ password: pass })
+    });
+
+    if (!res.ok) {
+        const err = await res.json();
+        mostrarToast(err.detail || "Error", "error");
+        return;
+    }
+
+    mostrarToast("Contraseña actualizada ✅", "success");
+}
+
+async function eliminar(id) {
+    if (!confirm("Eliminar usuario?")) return;
+
+    const res = await fetch(`/usuarios/${id}`, {
+        method: "DELETE",
+        headers: authHeaders()
+    });
+
+    if (!res.ok) {
+        const err = await res.json();
+        mostrarToast(err.detail || "Error", "error");
+        return;
+    }
+
+    mostrarToast("Usuario eliminado ✅", "success");
+
+    cargarUsuarios();
+}
+
+
+function abrirNuevo() {
+    usr_username.value = "";
+    usr_password.value = "";
+    usr_rol.value = "USER";
+
+    modalUsuario.classList.remove("hidden");
+}
+
+function cerrarModalUsuario() {
+    modalUsuario.classList.add("hidden");
+}
+
+async function guardarUsuario() {
+
+    const username = usr_username.value;
+    const password = usr_password.value;
+    const rol = usr_rol.value;
+    const nombre = usr_nombre.value;
+
+    if (!username || !password) {
+        alert("Completa todos los campos");
+        return;
+    }
+
+    const res = await fetch("/usuarios", {
+        method: "POST",
+        headers: {
+            ...authHeaders(),
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ username, password, rol, nombre})
+    });
+
+    if (!res.ok) {
+        const err = await res.json();
+        mostrarToast(err.detail || "Error", "error");
+        return;
+    }
+
+    mostrarToast("Usuario creado ✅", "success");
+
+    cerrarModalUsuario();
+    cargarUsuarios();
+}
+
+
+/* =========================
+   NAVEGACIÓN
+========================= */
+function volver() {
+   window.history.back();
+}
+
+function mostrarToast(mensaje, tipo = "success") {
+    const container = document.getElementById("toast-container");
+
+    const toast = document.createElement("div");
+    toast.className = `toast ${tipo}`;
+    toast.textContent = mensaje;
+
+    container.appendChild(toast);
+
+    // trigger animación
+    setTimeout(() => toast.classList.add("show"), 10);
+
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
+</script>
+</body>
+</html>

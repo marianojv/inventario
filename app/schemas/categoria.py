@@ -1,9 +1,10 @@
 from pydantic import BaseModel, Field
 
+class CategoriaUpdate(BaseModel):
+    nombre: str = Field(min_length=1)
 
 class CategoriaCreate(BaseModel):
     nombre: str = Field(..., min_length=1)
-
 
 class CategoriaResponse(BaseModel):
     id: int

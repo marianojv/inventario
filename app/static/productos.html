@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="/static/styles.css">
+<title>Productos</title>
+</head>
+
+<body>
+<div id="header-container"></div>
+<div class="container">
+
+<button class="btn" onclick="window.history.back()">⬅ Volver</button>
+<button class="btn primary" onclick="abrirAlta()">+ Nuevo producto</button>
+
+<h1>Productos</h1>
+
+<div class="toolbar">
+  <input id="searchInput" placeholder="Buscar..." onkeyup="filtrarTabla()">
+</div>
+
+<table>
+<thead>
+<tr>
+<th onclick="ordenar('codigo')">Código</th>
+<th onclick="ordenar('nombre')">Nombre</th>
+<th onclick="ordenar('precio_venta')">Precio</th>
+<th onclick="ordenar('stock')">Stock</th>
+<th>Categoría</th>
+<th>Estado</th>
+<th>Acción</th>
+</tr>
+</thead>
+<tbody id="productosTabla"></tbody>
+</table>
+
+</div>
+
+<div id="modalProducto" class="modal hidden">
+ <div class="modal-content">
+
+ <h2>Detalle de Producto</h2>
+ <input type="hidden" id="prod_id">
+
+ <div class="form-grid">
+   <label>Código</label>
+   <input id="prod_codigo" disabled>
+
+   <label>Nombre</label>
+   <input id="prod_nombre">
+
+   <label>Precio</label>
+   <div class="money">
+     <span>$</span>
+     <input id="prod_precio" type="number" step="0.01">
+   </div>
+
+   <label>Categoría</label>
+   <select id="prod_categoria"></select>
+
+   <label>Stock</label>
+   <input id="prod_stock" class="num" disabled>
+ </div>
+
+ <div class="modal-actions">
+   <button class="btn success" onclick="guardarProducto()">Guardar</button>
+   <button class="btn danger" onclick="eliminarProducto()">Eliminar</button>
+   <button class="btn" onclick="cerrarModal()">Cancelar</button>
+ </div>
+
+ </div>
+</div>
+
+<div id="modalAlta" class="modal hidden">
+  <div class="modal-content">
+
+    <h2>Nuevo Producto</h2>
+
+    <div class="form-grid">
+
+      <label>Categoría</label>
+      <select id="new_categoria"></select>
+
+      <label>Nombre</label>
+      <input id="new_nombre">
+
+      <label>Precio</label>
+      <div class="money">
+        <span>$</span>
+        <input id="new_precio" type="number" class="num">
+      </div>
+
+      <label>Stock inicial</label>
+      <input id="new_stock" type="number" class="num">
+
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn success" onclick="crearProducto()">Guardar</button>
+      <button class="btn" onclick="cerrarAlta()">Cancelar</button>
+    </div>
+
+  </div>
+</div>
+
+<div id="modalStock" class="modal hidden">
+  <div class="modal-content">
+
+    <h2>Ajustar Stock</h2>
+
+    <div class="form-grid">
+
+    <input type="hidden" id="stock_prod_id">
+    <input type="hidden" id="stock_actual">
+
+    <label>Cantidad</label>
+    <input id="stock_cantidad" type="number" class="num">
+    </div>  
+
+    <div class="modal-actions">
+      <button class="btn success" onclick="sumarStock()">Agregar</button>
+      <button class="btn danger" onclick="restarStock()">Restar</button>
+      <button class="btn" onclick="cerrarStock()">Cancelar</button>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="/static/app.js"></script>
+
+<script>
+
+const productosUrl = "/productos";
+const productosAdminUrl = "/productos-admin";
+const categoriasUrl = "/categorias";
+
+window.addEventListener("DOMContentLoaded", () => {
+    cargarCategorias();
+    cargarProductos();
+
+    document.getElementById("productoForm")
+    .addEventListener("submit", async e => {
+
+        e.preventDefault();
+
+        const categoria_id = parseInt(document.getElementById("categoria").value);
+
+        await fetch(productosUrl, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({
+                nombre: nombre.value,
+                precio_venta: parseFloat(precio.value),
+                stock: parseInt(stock.value),
+                categoria_id
+            })
+        });
+
+        mostrarToast("Producto creado ✅");
+        e.target.reset();
+        cargarProductos();
+    });
+});
+
+async function cargarCategorias() {
+ const res = await fetch(categoriasUrl,{headers:authHeaders()});
+ const data = await res.json();
+ const sel = document.getElementById("categoria");
+ sel.innerHTML = "";
+
+ data.forEach(c=>{
+   const o=document.createElement("option");
+   o.value=c.id;
+   o.textContent=c.nombre;
+   sel.appendChild(o);
+ });
+}
+
+/*async function cargarProductos() {
+ const res = await fetch(productosAdminUrl,{headers:authHeaders()});
+ const data = await res.json();
+
+ productos = data;
+
+ const tb = document.getElementById("productosTabla");
+ tb.innerHTML="";
+
+ data.forEach(p=>{
+   const tr=document.createElement("tr");
+
+   tr.innerHTML=`
+   <td class="num">${p.codigo}</td>
+   <td>${p.nombre}</td>
+   <td class="num">$${p.precio_venta.toFixed(2)}</td>
+   <td class="num">${p.stock}</td>
+   <td>${p.categoria?.nombre||"-"}</td>
+   <td>${p.activo?"Activo":"Inactivo"}</td>
+
+   <td>
+     <button class="btn ${p.activo?'danger':'success'}"
+       onclick="toggle(${p.id},${p.activo})">
+       ${p.activo?"Desactivar":"Activar"}
+     </button>
+
+     <button class="btn primary"
+       onclick="verDetalle(${p.id})">
+       Detalle
+     </button>
+   </td>
+   `;
+
+   tb.appendChild(tr);
+ });
+}
+*/
+async function toggle(id,activo){
+ const url=activo?`/productos/${id}/desactivar`:`/productos/${id}/activar`;
+ await fetch(url,{method:"POST",headers:authHeaders()});
+ cargarProductos();
+}
+
+async function verDetalle(id){
+ const p=await fetch(`/productos/${id}/detalle`,{headers:authHeaders()}).then(r=>r.json());
+
+ prod_id.value=p.id;
+ prod_codigo.value=p.codigo;
+ prod_nombre.value=p.nombre;
+ prod_precio.value = Number(p.precio_venta).toFixed(2);
+ prod_stock.value=p.stock;
+
+ await cargarCategoriasSelect(p.categoria.id);
+
+  
+// abrir modal
+  modalProducto.classList.remove("hidden");
+}
+
+function cerrarModal(){
+ modalProducto.classList.add("hidden");
+}
+
+async function guardarProducto(){
+
+ const precio = Number(prod_precio.value);
+
+ if (isNaN(precio)) {
+    mostrarToast("Precio inválido", "error");
+    return;
+ }
+
+ await fetch(`/productos/${prod_id.value}`,{
+   method:"PUT",
+   headers:authHeaders(),
+   body:JSON.stringify({
+     nombre:prod_nombre.value,
+     precio_venta: Number(prod_precio.value),
+     stock:parseInt(prod_stock.value),
+     categoria_id:parseInt(prod_categoria.value)
+   })
+ });
+ mostrarToast("Guardado ✅");
+ cerrarModal();
+ cargarProductos();
+}
+
+async function eliminarProducto(){
+ if(!confirm("Eliminar?"))return;
+
+ await fetch(`/productos/${prod_id.value}`,{
+   method:"DELETE",
+   headers:authHeaders()
+ });
+
+ mostrarToast("Eliminado ✅");
+ cerrarModal();
+ cargarProductos();
+}
+
+async function cargarCategoriasSelect(selectedId) {
+
+ const res = await fetch("/categorias", {
+   headers: authHeaders()
+ });
+
+ const cats = await res.json();
+ const sel = document.getElementById("prod_categoria");
+
+ sel.innerHTML = "";
+
+ cats.forEach(c => {
+   const opt = document.createElement("option");
+   opt.value = c.id;
+   opt.textContent = c.nombre;
+
+   if (c.id === selectedId) opt.selected = true;
+
+   sel.appendChild(opt);
+ });
+}
+
+function abrirAlta() {
+  document.getElementById("modalAlta").classList.remove("hidden");
+  cargarCategoriasAlta();
+}
+
+function cerrarAlta() {
+  document.getElementById("modalAlta").classList.add("hidden");
+}
+
+async function cargarCategoriasAlta() {
+  const res = await fetch("/categorias", { headers: authHeaders() });
+  const cats = await res.json();
+
+  const sel = document.getElementById("new_categoria");
+  sel.innerHTML = "";
+
+  cats.forEach(c => {
+    const o = document.createElement("option");
+    o.value = c.id;
+    o.textContent = c.nombre;
+    sel.appendChild(o);
+  });
+}
+
+async function crearProducto() {
+
+  const res = await fetch("/productos", {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({
+      nombre: new_nombre.value,
+      precio_venta: Number(new_precio.value),
+      stock: parseInt(new_stock.value),
+      categoria_id: parseInt(new_categoria.value)
+    })
+  });
+
+  if (!res.ok) {
+    mostrarToast("Error al crear producto", "error");
+    return;
+  }
+
+  mostrarToast("Producto creado ✅");
+
+  cerrarAlta();
+  cargarProductos();
+}
+
+// ✅ variable global
+let productos = [];
+let ordenAsc = true;
+let campoOrden = null;
+
+// ✅ ordenar columnas
+function ordenar(campo) {
+
+  // alterna si clickeás misma columna
+  if (campoOrden === campo) {
+    ordenAsc = !ordenAsc;
+  } else {
+    ordenAsc = true;
+    campoOrden = campo;
+  }
+
+  productos.sort((a, b) => {
+
+    let v1 = a[campo];
+    let v2 = b[campo];
+
+    if (v1 == null) v1 = "";
+    if (v2 == null) v2 = "";
+
+    if (typeof v1 === "string") {
+      v1 = v1.toLowerCase();
+      v2 = v2.toLowerCase();
+    }
+
+    if (v1 < v2) return ordenAsc ? -1 : 1;
+    if (v1 > v2) return ordenAsc ? 1 : -1;
+    return 0;
+  });
+
+  renderTabla();
+}
+
+// ✅ CARGA
+async function cargarProductos() {
+
+  const res = await fetch("/productos-admin", {
+    headers: authHeaders()
+  });
+
+  productos = await res.json();
+
+  renderTabla();
+}
+
+
+// ✅ RENDER
+function renderTabla() {
+
+  const tb = document.getElementById("productosTabla");
+
+  if (!tb) return;
+
+  tb.innerHTML = "";
+
+  productos.forEach(p => {
+
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td class="num">${p.codigo}</td>
+      <td>${p.nombre}</td>
+      <td class="num">$${Number(p.precio_venta).toFixed(2)}</td>
+      <td class="num">${p.stock}</td>
+      <td>${p.categoria?.nombre || "-"}</td>
+      <td>${p.activo ? "Activo" : "Inactivo"}</td>
+      <td>
+        <button class="btn ${p.activo ? 'danger' : 'success'}"
+          onclick="toggle(${p.id}, ${p.activo})">
+          ${p.activo ? "Desactivar" : "Activar"}
+        </button>
+
+        <button class="btn primary"
+          onclick="verDetalle(${p.id})">
+          Detalle
+        </button>
+
+        <button class="btn success"
+          onclick="abrirStock(${p.id}, ${p.stock})">
+          Stock
+        </button>
+
+      </td>
+    `;
+
+    tb.appendChild(tr);
+  });
+}
+
+renderTabla();
+
+function filtrarTabla() {
+  const texto = document.getElementById("searchInput").value.toLowerCase();
+
+  const rows = document.querySelectorAll("#productosTabla tr");
+
+  rows.forEach(r => {
+    r.style.display = r.textContent.toLowerCase().includes(texto)
+      ? ""
+      : "none";
+  });
+}
+
+function cerrarStock() {
+  modalStock.classList.add("hidden");
+}
+
+async function sumarStock() {
+
+  const actual = Number(stock_actual.value);
+  const cantidadInput = stock_cantidad.value.trim();
+
+  if (!Number.isFinite(actual)) {
+    mostrarToast("Error: stock actual inválido", "error");
+    return;
+  }
+
+  if (cantidadInput === "") {
+    mostrarToast("Ingresá una cantidad", "error");
+    return;
+  }
+
+  const cantidad = Number(cantidadInput);
+
+  if (!Number.isFinite(cantidad) || cantidad <= 0) {
+    mostrarToast("Cantidad inválida", "error");
+    return;
+  }
+
+  const nuevo = actual + cantidad;
+
+  await guardarStock(nuevo);
+}
+
+async function restarStock() {
+
+  const actual = Number(stock_actual.value);
+  const cantidadInput = stock_cantidad.value.trim();
+
+  if (!Number.isFinite(actual)) {
+    mostrarToast("Error: stock actual inválido", "error");
+    return;
+  }
+
+  if (cantidadInput === "") {
+    mostrarToast("Ingresá una cantidad", "error");
+    return;
+  }
+
+  const cantidad = Number(cantidadInput);
+
+  if (!Number.isFinite(cantidad) || cantidad <= 0) {
+    mostrarToast("Cantidad inválida", "error");
+    return;
+  }
+
+  const nuevo = actual - cantidad;
+
+  if (nuevo < 0) {
+    mostrarToast("Stock no puede ser negativo", "error");
+    return;
+  }
+
+  await guardarStock(nuevo);
+}
+
+
+
+async function guardarStock(nuevoStock) {
+
+  const id = Number(stock_prod_id.value);
+
+  const p = productos.find(x => Number(x.id) === id);
+
+  if (!p) {
+    mostrarToast("Producto no encontrado", "error");
+    return;
+  }
+
+  // 🔥 FORZAR número válido
+  const stockFinal = Number(nuevoStock);
+
+  if (!Number.isInteger(stockFinal)) {
+    mostrarToast("Stock inválido", "error");
+    return;
+  }
+
+  const res = await fetch(`/productos/${id}`, {
+    method: "PUT",
+    headers: authHeaders(),
+    body: JSON.stringify({
+      nombre: p.nombre,
+      precio_venta: Number(p.precio_venta),
+      stock: stockFinal,
+      categoria_id: p.categoria?.id
+    })
+  });
+
+  if (!res.ok) {
+
+    const err = await res.json().catch(() => null);
+
+    let msg = "Error inesperado";
+
+    if (err?.detail) {
+      if (Array.isArray(err.detail)) {
+        msg = err.detail[0]?.msg || msg;
+      } else {
+        msg = err.detail;
+      }
+    }
+
+    mostrarToast(msg, "error");
+    return;
+  }
+
+  mostrarToast("Stock actualizado ✅");
+
+  cerrarStock();
+  cargarProductos();
+}
+
+function abrirStock(id, stockActual) {
+  stock_prod_id.value = id;
+  stock_actual.value = stockActual;
+
+  stock_cantidad.value = ""; // importante
+  stock_cantidad.focus();    // 🔥 UX mejor
+
+  modalStock.classList.remove("hidden");
+}
+
+
+</script>
+
+</body>
+</html>

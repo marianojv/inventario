@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional
 from .categoria import CategoriaMini
+from pydantic import BaseModel, Field
 
 class ProductoCreate(BaseModel):
     nombre: str = Field(..., min_length=1)
@@ -28,3 +29,8 @@ class ProductoMini(BaseModel):
     class Config:
         from_attributes = True
         
+class ProductoUpdate(BaseModel):
+    nombre: str = Field(min_length=1)
+    precio_venta: float = Field(gt=0)
+    stock: int = Field(ge=0)
+    categoria_id: int

@@ -1,0 +1,464 @@
+/* =========================
+RESET
+========================= */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+/* =========================
+TOPBAR
+========================= */
+#topbar {
+  height: 50px;
+  background: #2c3e50;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+}
+
+.user-menu {
+  position: relative;
+  cursor: pointer;
+}
+
+.dropdown {
+  position: absolute;
+  right: 0;
+  top: 35px;
+  background: white;
+  color: black;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.2);
+}
+
+.dropdown div {
+  padding: 10px;
+}
+
+
+.dropdown div:hover {
+  background: #eee;
+}
+
+
+.hidden {
+  display: none;
+}
+
+/* =========================
+CONTAINER
+========================= */
+.container {
+  padding: 20px;
+}
+
+/* =========================
+ FORMULARIO
+========================= */
+.form-grid {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 12px 15px;
+  max-width: 500px;
+  margin-bottom: 25px;
+}
+
+.form-grid input,
+.form-grid select {
+  width: 100%;
+  padding: 6px;
+}
+
+/* =========================
+ MONEY INPUT (FIX REAL)
+========================= */
+.money {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  overflow: hidden;
+  height: 34px;
+}
+
+.money span {
+  background: #eee;
+  padding: 6px 10px;
+  border-right: 1px solid #ccc;
+}
+
+.money input {
+  border: none;
+  outline: none;
+  padding: 6px;
+  text-align: right;
+  flex: 1;
+}
+
+/* =========================
+ NUMERIC ALIGNMENT
+========================= */
+.num {
+  text-align: right;
+}
+
+/* quitar flechas */
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+  -webkit-appearance: none; 
+}
+
+input[type=number] { 
+  appearance: textfield; 
+}
+
+/* =========================
+ BOTONES (FIX DEFINITIVO)
+========================= */
+
+.btn {
+  padding: 6px 10px;
+  border-radius: 5px;
+  border: none;
+  color: white;
+  cursor: pointer;
+  background: #7f8c8d;   /* ✅ gris base */
+  transition: 0.2s;
+}
+
+/* variantes */
+.btn.primary { background: #3498db; }
+.btn.success { background: #27ae60; }
+.btn.danger  { background: #e74c3c; }
+
+/* hover siempre azul */
+.btn:hover {
+  background: #2980b9;
+  opacity: 0.9
+}
+
+
+/* =========================
+ TABLA
+========================= */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 20px;
+}
+
+th, td {
+  border: 1px solid #ccc;
+  padding: 10px;
+}
+
+th {
+  background: #f0f0f0;
+}
+
+/* zebra */
+tr:nth-child(even) {
+  background: #f9f9f9;
+}
+
+/* hover */
+tr:hover {
+  background: #e8f4ff;
+}
+
+table button {
+  margin-right: 5px;
+}
+
+/* =========================
+ MODAL
+========================= */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-content {
+  background: white;
+  padding: 20px;
+  width: 400px;
+}
+
+/* =========================
+ DARK MODE
+========================= */
+body.dark {
+  background: #1e1e1e;
+  color: #ddd;
+}
+
+body.dark #topbar {
+  background: #111;
+}
+
+/* tabla dark */
+body.dark th {
+  background: #333;
+}
+
+body.dark tr:nth-child(even) {
+  background: #2a2a2a;
+}
+
+body.dark tr:hover {
+  background: #333;
+}
+
+/* dropdown dark */
+body.dark .dropdown {
+  background: #2c2c2c;
+  color: white;
+}
+
+body.dark .dropdown div:hover {
+  background: #3a3a3a;
+}
+
+/* money dark */
+body.dark .money span {
+  background: #444;
+  color: white;
+}
+
+/* =========================
+BOTONES DARK MODE (FIX)
+========================= */
+
+body.dark .btn {
+  background: #555;
+}
+
+body.dark .btn.primary { background: #3498db; }
+body.dark .btn.success { background: #27ae60; }
+body.dark .btn.danger  { background: #e74c3c; }
+
+/* =========================/* TILES (HOME)
+========================= */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.tile {
+  background: white;
+  border-radius: 10px;
+  padding: 25px;
+  cursor: pointer;
+  text-align: center;
+  transition: 0.2s;
+  border: 1px solid #ddd;
+}
+
+.tile:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+}
+
+body.dark .tile {
+  background: #2c2c2c;
+  border: 1px solid #444;
+}
+
+body.dark .tile:hover {
+  background: #333;
+}
+
+.tile p {
+  margin: 0;
+  font-size: 16px;
+}
+
+.tile h3 {
+  margin: 0 0 10px;
+}
+/* =========================
+ MODAL DARK MODE
+========================= */
+body.dark .modal-content {
+  background: #2c2c2c;
+  color: #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+/* inputs dentro del modal */
+body.dark .modal-content input,
+body.dark .modal-content select {
+  background: #1e1e1e;
+  color: #ddd;
+  border: 1px solid #444;
+}
+
+/* labels */
+body.dark .modal-content label {
+  color: #bbb;
+}
+
+/* =========================
+ MODAL INPUTS (PRECIO / STOCK)
+========================= */
+
+/* contenedor con $ */
+.money {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  overflow: hidden;
+  height: 34px;
+}
+
+.money span {
+  background: #eee;
+  padding: 6px 10px;
+  border-right: 1px solid #ccc;
+}
+
+.money input {
+  border: none;
+  outline: none;
+  padding: 6px;
+  text-align: right;
+  flex: 1;
+}
+
+/* stock a la derecha */
+.modal-content input.num {
+  text-align: right;
+}
+
+/* dark mode */
+body.dark .money span {
+  background: #444;
+  color: #ddd;
+}
+
+/* =========================
+ LOGIN (FIX)
+========================= */
+
+body.login {
+  height: 100vh;
+  margin: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: linear-gradient(135deg, #2c3e50, #4ca1af);
+}
+
+.login-box {
+  background: white;
+  padding: 30px;
+  width: 300px;
+
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  text-align: center;
+}
+
+.login-box h2 {
+  margin-bottom: 20px;
+}
+
+.login-box input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 12px;
+
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.login-box button {
+  width: 100%;
+  padding: 10px;
+
+  background: #3498db;
+  color: white;
+
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.login-box button:hover {
+  background: #2980b9;
+}
+
+.error {
+  color: #e74c3c;
+  font-size: 13px;
+  margin-bottom: 10px;
+  min-height: 16px;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15px;
+}
+
+.toolbar input {
+  width: 200px;
+  padding: 6px;
+}
+
+
+#toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.toast {
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-top: 10px;
+  color: white;
+  min-width: 220px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.2);
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+}
+
+.toast.show {
+  opacity: 0.95;
+  transform: translateY(0);
+}
+
+.toast.success {
+  background: #2ecc71;
+}
+
+.toast.error {
+  background: #e74c3c;
+}

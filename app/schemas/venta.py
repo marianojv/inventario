@@ -2,6 +2,9 @@ from pydantic import BaseModel, Field
 from typing import List
 from datetime import datetime
 from .producto import ProductoMini
+from pydantic import BaseModel
+from typing import List
+
 
 class DetalleVentaCreate(BaseModel):
     producto_id: int
@@ -9,6 +12,7 @@ class DetalleVentaCreate(BaseModel):
 
 
 class VentaCreate(BaseModel):
+    cliente_id: int
     detalles: List[DetalleVentaCreate]
     
 class DetalleVentaResponse(BaseModel):

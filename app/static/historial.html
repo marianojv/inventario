@@ -2,32 +2,14 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <link rel="stylesheet" href="/static/styles.css">
     <title>Historial de Ventas</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 30px;
-        }
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin-bottom: 20px;
-        }
-        th, td {
-            border: 1px solid #ccc;
-            padding: 8px;
-        }
-        th {
-            background: #f4f4f4;
-        }
-        .detalle {
-            margin-left: 20px;
-            background: #fafafa;
-            padding: 10px;
-        }
-    </style>
 </head>
 <body>
+
+    <div class="ribbon">
+    <button onclick="volver()">⬅ Volver</button>
+</div>
 
 <h1>Historial de Ventas</h1>
 
@@ -46,8 +28,18 @@
 <div id="detalleVenta"></div>
 
 <script>
+
+function volver() {
+    window.location.href = "/";
+}
+
 async function cargarVentas() {
-    const res = await fetch("http://127.0.0.1:8000/ventas");
+    const res = await fetch("/ventas", {
+        headers: {
+            "x-user-id": JSON.parse(localStorage.getItem("usuario")).id,
+            "x-user-rol": JSON.parse(localStorage.getItem("usuario")).rol
+        }
+    });
     const ventas = await res.json();
 
     const tabla = document.getElementById("ventasTabla");

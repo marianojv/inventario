@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="/static/styles.css">
+<title>Clientes</title>
+
+</head>
+
+<body>
+
+<!-- =========================
+     RIBBON
+========================= -->
+<div class="ribbon">
+    <button onclick="volver()">⬅ Volver</button>
+    <button onclick="abrirModal()">➕ Crear cliente</button>
+</div>
+
+<div class="container">
+
+<input id="buscarCliente" placeholder="Buscar cliente..." oninput="cargarClientes()">
+
+<h1>Clientes</h1>
+
+<table>
+<thead>
+<tr>
+    <th>Código</th>
+    <th>Tipo</th>
+    <th>Nombre / Razón Social</th>
+    <th>Teléfono</th>
+    <th>Acciones</th>
+</tr>
+</thead>
+<tbody id="tablaClientes"></tbody>
+</table>
+
+</div>
+
+<!-- =========================
+     MODAL ALTA
+========================= -->
+<div class="modal hidden" id="modal">
+<div class="modal-content">
+
+<h2>Alta de Cliente</h2>
+
+<div class="form-row">
+    <label>Tipo de Cliente</label>
+    <div>
+        <input type="radio" name="tipo" value="EMPRESA" checked onchange="cambiarTipo()"> Empresa
+        <input type="radio" name="tipo" value="PERSONA" onchange="cambiarTipo()"> Persona Física
+    </div>
+</div>
+
+<div class="form-row empresa">
+    <label>Código Fiscal *</label>
+    <input id="codigo_fiscal">
+</div>
+
+<div class="form-row persona" style="display:none">
+    <label>DNI</label>
+    <input id="dni">
+</div>
+
+<div class="form-row">
+    <label>Nombre / Razón Social *</label>
+    <input id="nombre">
+</div>
+
+<div class="form-row">
+    <label>Teléfono</label>
+    <input id="telefono">
+</div>
+
+<div class="form-row">
+    <label>Calle</label>
+    <input id="calle">
+</div>
+
+<div class="form-row">
+    <label>Número</label>
+    <input id="numero">
+</div>
+
+<div class="form-row">
+    <label>Localidad</label>
+    <input id="localidad">
+</div>
+
+<div class="form-row">
+    <label>Código Postal</label>
+    <input id="codigo_postal">
+</div>
+
+<div class="form-row">
+    <button onclick="guardar()">Guardar</button>
+    <button onclick="cerrarModal()">Cancelar</button>
+</div>
+
+</div>
+</div>
+
+<div id="modalCliente" class="modal hidden">
+  <div class="modal-content">
+
+    <h2>Detalle del Cliente</h2>
+
+    <input type="hidden" id="cli_id">
+
+    <div class="form-grid">
+
+      <label>Código</label>
+      <input id="cli_codigo" disabled>
+
+      <label>Nombre</label>
+      <input id="cli_nombre">
+
+      <label>Tipo</label>
+        <select id="cli_tipo_cliente">
+            <option value="EMPRESA">Empresa</option>
+            <option value="PERSONA">Persona</option>
+        </select>
+
+      <label>Teléfono</label>
+      <input id="cli_telefono">
+
+      <label>Calle</label>
+      <input id="cli_calle">
+
+      <label>Número</label>
+      <input id="cli_numero">
+
+      <label>Localidad</label>
+      <input id="cli_localidad">
+
+      <label>Código Postal</label>
+      <input id="cli_codigo_postal">
+
+      <label>Código Fiscal</label>
+      <input id="cli_codigo_fiscal">
+
+      <label>DNI</label>
+      <input id="cli_dni">
+    
+    </div>
+
+    <div class="modal-actions">
+      <button onclick="guardarCliente()">Guardar</button>
+      <button onclick="eliminarCliente()" class="danger">Eliminar</button>
+      <button onclick="cerrarModalCliente()">Cancelar</button>
+    </div>
+
+  </div>
+</div>
+
+
+<script>
+/*const apiClientes = "http://127.0.0.1:8000/clientes";*/
+
+const apiClientes = "/clientes";
+/*const buscarClientesUrl = "/clientes/buscar";
+const buscarProductosUrl = "/productos/buscar";
+const ventasUrl = "/ventas";*/
+const modalCliente = document.getElementById("modalCliente");
+
+const cli_id = document.getElementById("cli_id");
+const cli_codigo = document.getElementById("cli_codigo");
+const cli_nombre = document.getElementById("cli_nombre");
+const cli_tipo_cliente = document.getElementById("cli_tipo_cliente");
+const cli_telefono = document.getElementById("cli_telefono");
+const cli_calle = document.getElementById("cli_calle");
+const cli_numero = document.getElementById("cli_numero");
+const cli_localidad = document.getElementById("cli_localidad");
+const cli_codigo_postal = document.getElementById("cli_codigo_postal");
+const cli_codigo_fiscal = document.getElementById("cli_codigo_fiscal");
+const cli_dni = document.getElementById("cli_dni");
+
+/* =========================
+   NAVEGACIÓN
+========================= */
+function volver() {
+    window.location.href = "/";
+}
+
+/* =========================
+   MODAL
+========================= */
+function abrirModal() {
+  document.getElementById("modal").classList.remove("hidden");
+}
+
+function cerrarModal() {
+  document.getElementById("modal").classList.add("hidden");
+}
+
+/* =========================
+   TIPO CLIENTE
+========================= */
+function cambiarTipo() {
+    const tipo = document.querySelector("input[name=tipo]:checked").value;
+    document.querySelectorAll(".empresa").forEach(e => e.style.display = tipo === "EMPRESA" ? "flex" : "none");
+    document.querySelectorAll(".persona").forEach(e => e.style.display = tipo === "PERSONA" ? "flex" : "none");
+}
+
+/* =========================
+   GUARDAR
+========================= */
+async function guardar() {
+    const tipo = document.querySelector("input[name=tipo]:checked").value;
+
+    const payload = {
+        tipo_cliente: tipo,
+        nombre_razon_social: nombre.value,
+        telefono: telefono.value || null,
+        calle: calle.value || null,
+        numero: numero.value || null,
+        localidad: localidad.value || null,
+        codigo_postal: codigo_postal.value || null,
+        codigo_fiscal: tipo === "EMPRESA" ? codigo_fiscal.value : null,
+        dni: tipo === "PERSONA" ? dni.value : null
+    };
+
+    const res = await fetch(apiClientes, {
+        method: "POST",
+        headers: { "Content-Type": "application/json",
+                   "x-user-id": JSON.parse(localStorage.getItem("usuario")).id,
+                   "x-user-rol": JSON.parse(localStorage.getItem("usuario")).rol
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+        const err = await res.json();
+        alert(err.detail);
+        return;
+    }
+
+    cerrarModal();
+    cargarClientes();
+}
+
+/* =========================
+   LISTADO
+========================= */
+async function cargarClientes() {
+    const res = await fetch(apiClientes, {
+        headers: {
+            "x-user-id": JSON.parse(localStorage.getItem("usuario")).id,
+            "x-user-rol": JSON.parse(localStorage.getItem("usuario")).rol
+        }
+    });
+    let clientes = await res.json();
+
+    const filtro = buscarCliente.value.toLowerCase();
+
+    clientes = clientes.filter(c =>
+        (c.nombre_razon_social || "").toLowerCase().includes(filtro)
+    );
+
+    const tb = document.getElementById("tablaClientes");
+    tb.innerHTML = "";
+
+    clientes.forEach(c => {
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+            <td>${c.codigo_cliente}</td>
+            <td>${c.tipo_cliente}</td>
+            <td>${c.nombre_razon_social}</td>
+            <td>${c.telefono ?? ""}</td>
+            <td>
+                <button onclick="verDetalleCliente(${c.id})">
+                    Detalle
+                </button>
+            </td>
+        `;
+
+        tb.appendChild(tr);
+    });
+}
+
+
+cambiarTipo();
+cargarClientes();
+
+
+async function verDetalleCliente(id) {
+    const res = await fetch(`/clientes/${id}`, {
+        headers: {
+            "x-user-id": JSON.parse(localStorage.getItem("usuario")).id,
+            "x-user-rol": JSON.parse(localStorage.getItem("usuario")).rol
+        }
+    });
+    const c = await res.json();
+
+    cli_id.value = c.id;
+    cli_codigo.value = c.codigo_cliente;
+    cli_nombre.value = c.nombre_razon_social;
+    cli_tipo_cliente.value = c.tipo_cliente;
+    cli_telefono.value = c.telefono;
+    cli_calle.value = c.calle;
+    cli_numero.value = c.numero;
+    cli_localidad.value = c.localidad;
+    cli_codigo_postal.value = c.codigo_postal;
+    cli_codigo_fiscal.value = c.codigo_fiscal;
+    cli_dni.value = c.dni;       
+
+    modalCliente.classList.remove("hidden");
+}
+
+async function guardarCliente() {
+    const id = cli_id.value;
+
+    const payload = {
+        tipo_cliente: cli_tipo_cliente.value,
+        nombre_razon_social: cli_nombre.value,
+        telefono: cli_telefono.value || null,
+
+        calle: cli_calle.value || null,
+        numero: cli_numero.value || null,
+        localidad: cli_localidad.value || null,
+        codigo_postal: cli_codigo_postal.value || null,
+
+        codigo_fiscal: cli_tipo_cliente.value === "EMPRESA"
+            ? cli_codigo_fiscal.value || null
+            : null,
+
+        dni: cli_tipo_cliente.value === "PERSONA"
+            ? cli_dni.value || null
+            : null
+    };
+
+    console.log(payload);
+
+    const res = await fetch(`/clientes/${id}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            "x-user-id": JSON.parse(localStorage.getItem("usuario")).id,
+            "x-user-rol": JSON.parse(localStorage.getItem("usuario")).rol
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+        const err = await res.json();
+        console.log(err);   // 👈 CLAVE
+        alert(err.detail || "Error");
+        return;
+    }
+
+
+    cerrarModalCliente();
+    cargarClientes();
+}
+
+async function eliminarCliente() {
+    if (!confirm("¿Eliminar cliente?")) return;
+
+    const id = cli_id.value;
+
+    await fetch(`/clientes/${id}`, {
+        method: "DELETE",
+        headers: {
+            "x-user-id": JSON.parse(localStorage.getItem("usuario")).id,
+            "x-user-rol": JSON.parse(localStorage.getItem("usuario")).rol
+        }
+    });
+
+    cerrarModalCliente();
+    cargarClientes();
+}
+
+function cerrarModalCliente() {
+    modalCliente.classList.add("hidden");
+}
+
+
+</script>
+
+</body>
+</html>

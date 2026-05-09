@@ -1,57 +1,233 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-    <meta charset="UTF-8">
-    <title>Configuración</title>
-    <style>
-        body { font-family: Arial; margin: 30px; }
-        input, button { padding: 6px; margin: 5px; }
-        ul { margin-top: 15px; }
-    </style>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="/static/styles.css">
+<title>Configuración</title>
 </head>
+
 <body>
+
+<div class="ribbon">
+  <button onclick="history.back()">← Volver</button>
+</div>
 
 <h1>Configuración del Sistema</h1>
 
-<h2>Categorías de Productos</h2>
+<!-- Tiles -->
+<div class="tiles">
 
-<input type="text" id="nombreCategoria" placeholder="Nueva categoría">
-<button onclick="crearCategoria()">Agregar</button>
+  <div class="tile" onclick="mostrarSeccion('categorias')">
+    <h3>Categorías de Productos</h3>
+  </div>
 
-<ul id="listaCategorias"></ul>
+  <div class="tile" onclick="mostrarSeccion('config')">
+    <h3>Configuración de Productos</h3>
+  </div>
+
+  <div class="tile" onclick="window.location.href='/usuarios-web'">
+    <h3>Administración de usuarios</h3>
+  </div>
+
+</div>
+
+<!-- ========================= -->
+<!-- SECCIÓN CATEGORÍAS -->
+<!-- ========================= -->
+<div id="sec-categorias" class="hidden">
+
+  <h2>Categorías</h2>
+
+  <input id="cat_nombre" placeholder="Nueva categoría">
+  <button onclick="crearCategoria()">Agregar</button>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="tablaCategorias"></tbody>
+  </table>
+
+</div>
+
+<!-- ========================= -->
+<!-- SECCIÓN CONFIG -->
+<!-- ========================= -->
+<div id="sec-config" class="hidden">
+
+  <h2>Configuración de Productos</h2>
+
+  <div>
+    <label>Precio máximo permitido</label><br>
+    <input type="number" step="0.01" id="maxPrecio">
+  </div>
+
+  <div>
+    <label>Stock máximo permitido</label><br>
+    <input type="number" id="maxStock">
+  </div>
+
+  <button onclick="guardarConfiguracion()">Guardar configuración</button>
+
+</div>
 
 <script>
-const apiUrl = "http://127.0.0.1:8000/categorias";
+
+const configApiUrl = "/api/configuracion";
+
+/* ========================= */
+/* NAVEGACIÓN */
+/* ========================= */
+
+function mostrarSeccion(s) {
+    document.getElementById("sec-categorias").classList.add("hidden");
+    document.getElementById("sec-config").classList.add("hidden");
+
+    if (s === "categorias") {
+        document.getElementById("sec-categorias").classList.remove("hidden");
+        cargarCategorias();
+    }
+
+    if (s === "config") {
+        document.getElementById("sec-config").classList.remove("hidden");
+    }
+}
+
+/* ========================= */
+/* CONFIGURACIÓN */
+/* ========================= */
+
+async function cargarConfiguracion() {
+    const res = await fetch(configApiUrl, {
+        headers: {
+            "x-user-id": JSON.parse(localStorage.getItem("usuario")).id,
+            "x-user-rol": JSON.parse(localStorage.getItem("usuario")).rol
+        }
+    });
+    const config = await res.json();
+
+    maxPrecio.value = config.max_precio_producto;
+    maxStock.value = config.max_stock_producto;
+}
+
+async function guardarConfiguracion() {
+    const payload = {
+        max_precio_producto: parseFloat(maxPrecio.value),
+        max_stock_producto: parseInt(maxStock.value)
+    };
+
+    const res = await fetch(configApiUrl, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            "x-user-id": JSON.parse(localStorage.getItem("usuario")).id,
+            "x-user-rol": JSON.parse(localStorage.getItem("usuario")).rol
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+        alert("Error al guardar");
+        return;
+    }
+
+    alert("Configuración guardada");
+}
+
+/* ========================= */
+/* CATEGORÍAS */
+/* ========================= */
 
 async function cargarCategorias() {
-    const res = await fetch(apiUrl);
-    const categorias = await res.json();
+    const res = await fetch("/categorias", {
+        headers: {
+            "x-user-id": JSON.parse(localStorage.getItem("usuario")).id,
+            "x-user-rol": JSON.parse(localStorage.getItem("usuario")).rol
+        }
+    });
+    const cats = await res.json();
 
-    const ul = document.getElementById("listaCategorias");
-    ul.innerHTML = "";
+    tablaCategorias.innerHTML = "";
 
-    categorias.forEach(c => {
-        const li = document.createElement("li");
-        li.textContent = c.nombre;
-        ul.appendChild(li);
+    cats.forEach(c => {
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+            <td>${c.nombre}</td>
+            <td>
+                <button onclick="editarCategoria(${c.id}, '${c.nombre}')">Editar</button>
+                <button onclick="eliminarCategoria(${c.id})">Eliminar</button>
+            </td>
+        `;
+
+        tablaCategorias.appendChild(tr);
     });
 }
 
 async function crearCategoria() {
-    const nombre = document.getElementById("nombreCategoria").value;
-    if (!nombre) return;
+    if (!cat_nombre.value) return;
 
-    await fetch(apiUrl, {
+    await fetch("/categorias", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre })
+        headers: {
+            "Content-Type": "application/json",
+            "x-user-id": JSON.parse(localStorage.getItem("usuario")).id,
+            "x-user-rol": JSON.parse(localStorage.getItem("usuario")).rol
+        },
+        body: JSON.stringify({ nombre: cat_nombre.value })
     });
 
-    document.getElementById("nombreCategoria").value = "";
+    cat_nombre.value = "";
     cargarCategorias();
 }
 
-cargarCategorias();
+async function editarCategoria(id, nombre) {
+    const nuevo = prompt("Nuevo nombre", nombre);
+    if (!nuevo) return;
+
+    await fetch(`/categorias/${id}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            "x-user-id": JSON.parse(localStorage.getItem("usuario")).id,
+            "x-user-rol": JSON.parse(localStorage.getItem("usuario")).rol
+        },
+        body: JSON.stringify({ nombre: nuevo })
+    });
+
+    cargarCategorias();
+}
+
+async function eliminarCategoria(id) {
+    if (!confirm("¿Eliminar categoría?")) return;
+
+    const res = await fetch(`/categorias/${id}`, {
+        method: "DELETE",
+        headers: {
+            "x-user-id": JSON.parse(localStorage.getItem("usuario")).id,
+            "x-user-rol": JSON.parse(localStorage.getItem("usuario")).rol
+        }
+    });
+
+    if (!res.ok) {
+        const err = await res.json();
+        alert(err.detail);
+        return;
+    }
+
+    cargarCategorias();
+}
+
+/* ========================= */
+/* INIT */
+/* ========================= */
+
+cargarConfiguracion();
+
 </script>
 
 </body>

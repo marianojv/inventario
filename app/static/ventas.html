@@ -2,124 +2,16 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<link rel="stylesheet" href="/static/styles.css">
 <title>Ventas</title>
-
-<style>
-body {
-    font-family: Arial, sans-serif;
-    margin: 30px;
-}
-
-input {
-    padding: 6px;
-    font-size: 14px;
-}
-
-/* =========================
-   CLIENTE
-========================= */
-.cliente-box {
-    margin-bottom: 20px;
-    padding: 10px;
-    border: 1px solid #ccc;
-}
-
-.row {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-.row label {
-    width: 130px;
-}
-
-#cliente_codigo {
-    width: 200px;
-}
-
-#cliente_nombre {
-    width: 300px;
-}
-
-/* =========================
-   PRODUCTOS
-========================= */
-#producto {
-    width: 420px;
-}
-
-/* =========================
-   TABLA
-========================= */
-table {
-    border-collapse: collapse;
-    width: 100%;
-    margin-top: 20px;
-}
-th, td {
-    border: 1px solid #ccc;
-    padding: 8px;
-}
-th {
-    background: #f4f4f4;
-}
-th.num, td.num {
-    text-align: right;
-}
-
-/* =========================
-   FOOTER
-========================= */
-tfoot td {
-    font-weight: bold;
-    background: #fafafa;
-}
-
-/* =========================
-   MODAL
-========================= */
-.modal {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,.4);
-}
-
-.modal-content {
-    background: #fff;
-    width: 600px;
-    margin: 50px auto;
-    padding: 20px;
-}
-
-.form-row {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 10px;
-}
-.form-row label {
-    width: 150px;
-}
-
-/* util */
-.hidden { display: none; }
-
-/* quitar flechas number */
-input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-input[type=number] {
-    -moz-appearance: textfield;
-    text-align: right;
-}
-</style>
 </head>
 
 <body>
+
+<div class="ribbon">
+    <button onclick="volver()">⬅ Volver</button>
+</div>
+
 
 <h1>Nueva Venta</h1>
 
@@ -242,10 +134,18 @@ input[type=number] {
 </div>
 
 <script>
-const buscarClientesUrl = "http://127.0.0.1:8000/clientes/buscar";
+/*const buscarClientesUrl = "http://127.0.0.1:8000/clientes/buscar";
 const crearClienteUrl = "http://127.0.0.1:8000/clientes";
 const buscarProductosUrl = "http://127.0.0.1:8000/productos/buscar";
-const ventasUrl = "http://127.0.0.1:8000/ventas";
+const ventasUrl = "http://127.0.0.1:8000/ventas";*/
+
+const crearClienteUrl = "/clientes";
+const buscarClientesUrl = "/clientes/buscar";
+const buscarProductosUrl = "/productos/buscar";
+const ventasUrl = "/ventas";
+
+const detalle = document.getElementById("detalle");
+const totalSpan = document.getElementById("total");
 
 let clienteActual = null;
 let clientesCache = [];
@@ -260,7 +160,12 @@ cliente_codigo.addEventListener("input", async () => {
     const q = cliente_codigo.value.trim();
     if (q.length < 2) return;
 
-    const res = await fetch(`${buscarClientesUrl}?q=${encodeURIComponent(q)}`);
+    const res = await fetch(`${buscarClientesUrl}?q=${encodeURIComponent(q)}`, {
+        headers: {
+            "x-user-id": JSON.parse(localStorage.getItem("usuario")).id,
+            "x-user-rol": JSON.parse(localStorage.getItem("usuario")).rol
+        }
+    });
     const clientes = await res.json();
 
     clientesCache = clientes;
@@ -293,7 +198,12 @@ producto.addEventListener("input", async () => {
     const q = producto.value.trim();
     if (q.length < 2) return;
 
-    const res = await fetch(`${buscarProductosUrl}?q=${encodeURIComponent(q)}`);
+    const res = await fetch(`${buscarProductosUrl}?q=${encodeURIComponent(q)}`, {
+        headers: {
+            "x-user-id": JSON.parse(localStorage.getItem("usuario")).id,
+            "x-user-rol": JSON.parse(localStorage.getItem("usuario")).rol
+        }
+    });
     const productos = await res.json();
 
     productosCache = productos;
@@ -328,6 +238,7 @@ function agregarProducto(p, cant) {
         codigo: p.codigo,
         nombre: p.nombre,
         precio: p.precio,
+        stock: p.stock,          // ✅ volver a guardar stock
         cantidad: cant
     });
     render();
@@ -347,7 +258,13 @@ function render() {
             <td>${d.nombre}</td>
             <td class="num">$${d.precio.toFixed(2)}</td>
             <td class="num">
-              <input type="number" min="1" value="${d.cantidad}">
+              <input
+                type="number"
+                min="1"
+                value="${d.cantidad}"
+                onchange="cambiarCantidad(${i}, this.value)"
+                onblur="cambiarCantidad(${i}, this.value)"
+                >
             </td>
             <td class="num">$${sub.toFixed(2)}</td>
         `;
@@ -382,7 +299,11 @@ async function confirmarVenta() {
 
     const res = await fetch(ventasUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+            "Content-Type": "application/json",
+            "x-user-id": JSON.parse(localStorage.getItem("usuario")).id,
+            "x-user-rol": JSON.parse(localStorage.getItem("usuario")).rol
+        },
         body: JSON.stringify(payload)
     });
 
@@ -436,9 +357,21 @@ async function guardarCliente() {
 
     const res = await fetch(crearClienteUrl, {
         method:"POST",
-        headers:{"Content-Type":"application/json"},
+        headers: {
+            "Content-Type": "application/json",
+            "x-user-id": JSON.parse(localStorage.getItem("usuario")).id,
+            "x-user-rol": JSON.parse(localStorage.getItem("usuario")).rol
+        },
         body: JSON.stringify(payload)
     });
+
+
+    if (!res.ok) {
+        const err = await res.json();
+        alert(err.detail || "Error al crear cliente");
+        return;
+    }
+
 
     const c = await res.json();
     clienteActual = c;
@@ -447,6 +380,30 @@ async function guardarCliente() {
 
     cerrarModalCliente();
 }
+
+function cambiarCantidad(index, valor) {
+    const cantidad = parseInt(valor);
+    const item = detalles[index];
+
+    if (isNaN(cantidad) || cantidad <= 0) {
+        render();
+        return;
+    }
+
+    if (cantidad > item.stock) {
+        alert(`Stock disponible: ${item.stock} unidades`);
+        render();   // vuelve al valor válido
+        return;
+    }
+
+    item.cantidad = cantidad;
+    render();
+}
+
+function volver() {
+    window.location.href = "/";
+}
+
 </script>
 
 </body>

@@ -2,13 +2,14 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<link rel="stylesheet" href="/static/styles.css">
 <title>Ingreso de Stock</title>
-<style>
-body { font-family: Arial; margin: 30px; }
-input, select, button { margin: 5px; padding: 6px; }
-</style>
 </head>
 <body>
+
+<div class="ribbon">
+    <button onclick="volver()">⬅ Volver</button>
+</div>
 
 <h1>Ingreso de Stock</h1>
 
@@ -18,11 +19,19 @@ input, select, button { margin: 5px; padding: 6px; }
 <button onclick="ingresarStock()">Ingresar</button>
 
 <script>
-const productosUrl = "http://127.0.0.1:8000/productos-admin";
-const ingresoUrl = "http://127.0.0.1:8000/stock/ingreso";
+const productosUrl = "/productos-admin";
+const ingresoUrl = "/stock/ingreso";
+
+function volver() {
+    window.location.href = "/";
+}
 
 async function cargarProductos() {
-    const res = await fetch(productosUrl);
+    const res = await fetch(productosUrl, {
+        headers: { "x-user-id": JSON.parse(localStorage.getItem("usuario")).id,
+                   "x-user-rol": JSON.parse(localStorage.getItem("usuario")).rol
+        }
+    });
     const productos = await res.json();
     const select = document.getElementById("producto");
 
@@ -48,7 +57,11 @@ async function ingresarStock() {
 
     const res = await fetch(ingresoUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+            "Content-Type": "application/json",
+            "x-user-id": JSON.parse(localStorage.getItem("usuario")).id,
+            "x-user-rol": JSON.parse(localStorage.getItem("usuario")).rol
+        },
         body: JSON.stringify({ producto_id, cantidad, motivo })
     });
 

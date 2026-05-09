@@ -43,3 +43,19 @@ class ClienteResponse(BaseModel):
 
     class Config:
         from_attributes = True
+        
+
+class ClienteUpdate(BaseModel):
+    tipo_cliente: TipoCliente
+
+    nombre_razon_social: str   # ✅ CORRECTO
+    telefono: Optional[str] = None
+
+    calle: Optional[str] = None
+    numero: Optional[str] = None
+    localidad: Optional[str] = None
+    codigo_postal: Optional[str] = None
+
+    codigo_fiscal: Optional[str] = None
+    dni: Optional[str] = None
+

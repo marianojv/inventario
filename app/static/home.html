@@ -2,76 +2,43 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <link rel="stylesheet" href="/static/styles.css">
     <title>Sistema de Stock</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-        }
-        h1 {
-            margin-bottom: 30px;
-        }
-        .menu {
-            display: flex;
-            gap: 20px;
-        }
-        a {
-            text-decoration: none;
-        }
-        .card {
-            border: 1px solid #ccc;
-            padding: 20px;
-            width: 200px;
-            text-align: center;
-            background: #f9f9f9;
-            cursor: pointer;
-        }
-        .card:hover {
-            background: #eaeaea;
-        }
-    </style>
 </head>
 <body>
+<div id="header-container"></div>
 
-<h1>Sistema de Stock y Ventas</h1>
+<div class="container">
 
-<div class="menu">
-    <a href="/web">
-        <div class="card">
-            <h3>Productos</h3>
-            <p>ABM y stock</p>
-        </div>
-    </a>
+  <h1>Sistema de Stock y Ventas</h1>
 
-    <a href="/ventas-web">
-        <div class="card">
-            <h3>Nueva Venta</h3>
-            <p>Registrar ventas</p>
-        </div>
-    </a>
+  <div class="tiles">
 
-    <a href="/historial-web">
-        <div class="card">
-            <h3>Historial</h3>
-            <p>Ver ventas</p>
-        </div>
-    </a>
-
-    <a href="/stock-web">
-    <div class="card">
-        <h3>Ingreso de Stock</h3>
-        <p>Compras y ajustes</p>
+    <div class="tile" onclick="location.href='/productos-web'">
+    <p>Productos</p>
     </div>
-    </a>
 
-    <a href="/configuracion">
-    <div class="card">
-        <h3>Configuración</h3>
-        <p>Categorías y ajustes</p>
+    <div class="tile" onclick="location.href='/ventas-web'">
+    <p>Ventas</p>
     </div>
-</a>
-    
+
+    <div class="tile" onclick="location.href='/historial-web'">
+    <p>Historial</p>
+    </div>
+
+    <!--div class="tile" onclick="location.href='/stock-web'">
+    <p>Compras y ajustes</p>
+    </div-->
+
+    <div class="tile" onclick="location.href='/clientes-web'">
+    <p>Clientes</p>
+    </div>
+
+    <div id="menu-config" class="tile" onclick="location.href='/configuracion-web'">
+    <p>Configuración</p>
+    </div>
+  </div>
 </div>
-
+<script src="/static/app.js"></script>
 </body>
 </html>
